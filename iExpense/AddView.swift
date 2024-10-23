@@ -8,13 +8,13 @@
 import SwiftUI
 
 struct AddView: View {
+    @Environment(\.modelContext) var modelContext
     @Environment(\.dismiss) var dismiss
     
     @State private var name = "New Expense"
     @State private var type = "Personal"
     @State private var amount = 0.0
 
-    var expenses: Expenses
     let types = ["Business", "Personal"]
     @Binding var selectedCurrency: Currency
 
@@ -42,7 +42,7 @@ struct AddView: View {
                                     }
 
                                     let item = ExpenseItem(name: name, type: type, amount: finalAmount)
-                                    expenses.addItem(item)
+                                    modelContext.insert(item)
                                     dismiss()
                                 }
                 Button("Cancel") {
@@ -54,5 +54,6 @@ struct AddView: View {
 }
 
 #Preview {
-    AddView(expenses: Expenses(), selectedCurrency: .constant(.usd))
+    AddView(selectedCurrency: .constant(.usd))
+        .modelContainer(for: ExpenseItem.self)
 }

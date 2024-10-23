@@ -5,14 +5,20 @@
 //  Created by Juan Carlos Robledo Morales on 18/09/24.
 //
 
-
+import SwiftData
 import SwiftUI
 
-struct ExpenseItem: Identifiable, Codable, Equatable {
-    var id = UUID()
+@Model
+class ExpenseItem {
     let name: String
     let type: String
     let amount: Double
+    
+    init(name: String, type: String, amount: Double) {
+        self.name = name
+        self.type = type
+        self.amount = amount
+    }
 }
 
 enum Currency: String, CaseIterable, Identifiable {
@@ -22,43 +28,11 @@ enum Currency: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 }
 
-@Observable
-class Expenses {
-    var items = [ExpenseItem]() {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(items) {
-                UserDefaults.standard.set(encoded, forKey: "Items")
-            }
-        }
-    }
-    
-    var personalItems: [ExpenseItem] {
-        items.filter { $0.type == "Personal" }
-    }
-    
-    var businessItems: [ExpenseItem] {
-        items.filter { $0.type == "Business" }
-    }
-
-    init() {
-        if let savedItems = UserDefaults.standard.data(forKey: "Items") {
-            if let decodedItems = try? JSONDecoder().decode([ExpenseItem].self, from: savedItems) {
-                items = decodedItems
-                return
-            }
-        }
-
-        items = []
-    }
-
-    func addItem(_ item: ExpenseItem) {
-        items.append(item)
-    }
-}
 
 
 struct ContentView: View {
-    @State private var expenses = Expenses()
+    @Environment(\.modelContext) var modelContext
+    @Query private var expenses: [ExpenseItem]
     @State private var showingAddExpense = false
     @State private var selectedCurrency: Currency = .usd
  
@@ -74,8 +48,8 @@ struct ContentView: View {
                 .padding()
                 
                 List {
-                    Section(header: Text("Personal Expenses")) {
-                        ForEach(expenses.personalItems) { item in
+                    Section(header: Text("Expenses")) {
+                        ForEach(expenses) { item in
                             HStack {
                                 VStack(alignment: .leading) {
                                     Text(item.name)
@@ -88,29 +62,12 @@ struct ContentView: View {
                                     .applyStyle(for: item.amount)
                             }
                         }
-                        .onDelete(perform: removePersonalItems)
-                    }
-                    
-                    Section(header: Text("Business Expenses")) {
-                        ForEach(expenses.businessItems) { item in
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(item.name)
-                                        .font(.headline)
-                                    Text(item.type)
-                                }
-                                
-                                Spacer()
-                                Text(formatPrice(item.amount, in: selectedCurrency))
-                                    .applyStyle(for: item.amount)
-                            }
-                        }
-                        .onDelete(perform: removeBusinessItems)
+                        .onDelete(perform: removeItems)
                     }
                 }
                 .navigationTitle("iExpense")
                 .toolbar {
-                    NavigationLink(destination: AddView(expenses: expenses, selectedCurrency: $selectedCurrency)) {
+                    NavigationLink(destination: AddView(selectedCurrency: $selectedCurrency)) {
                         Label("Add Expense", systemImage: "plus")
                     }
                 }
@@ -128,22 +85,12 @@ struct ContentView: View {
         }
     }
     
-    func removePersonalItems(at offsets: IndexSet) {
-        for offset in offsets {
-            if let index = expenses.items.firstIndex(of: expenses.personalItems[offset]) {
-                expenses.items.remove(at: index)
-            }
+    func removeItems(at offsets: IndexSet) {
+        for offset in offsets{
+            let item = expenses[offset]
+            modelContext.delete(item)
         }
     }
-
-    func removeBusinessItems(at offsets: IndexSet) {
-        for offset in offsets {
-            if let index = expenses.items.firstIndex(of: expenses.businessItems[offset]) {
-                expenses.items.remove(at: index)
-            }
-        }
-    }
-
 }
 
 extension View {
@@ -163,4 +110,5 @@ extension View {
 
 #Preview {
     ContentView()
+        .modelContainer(for: ExpenseItem.self)
 }
