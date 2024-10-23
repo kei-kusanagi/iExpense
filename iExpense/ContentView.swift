@@ -34,15 +34,25 @@ struct ContentView: View {
     @State private var showingAddExpense = false
     @State private var selectedCurrency: Currency = .usd
     
+    @State private var expenseType = "All" // Default: show all expenses
 
     @State private var sortOrder = [
         SortDescriptor(\ExpenseItem.name),
         SortDescriptor(\ExpenseItem.amount)
     ]
  
+    var filteredExpenses: [ExpenseItem] {
+        // Filtrar según el tipo seleccionado
+        if expenseType == "All" {
+            return expenses
+        } else {
+            return expenses.filter { $0.type == expenseType }
+        }
+    }
+    
     var sortedExpenses: [ExpenseItem] {
-
-        expenses.sorted(using: sortOrder)
+        // Aplicar el orden después de filtrar
+        filteredExpenses.sorted(using: sortOrder)
     }
     
     var body: some View {
@@ -79,31 +89,45 @@ struct ContentView: View {
                     NavigationLink(destination: AddView(selectedCurrency: $selectedCurrency)) {
                         Label("Add Expense", systemImage: "plus")
                     }
-                }
-                Menu("Sort", systemImage: "arrow.up.arrow.down") {
-                    Button("Name (A-Z)") {
-                        sortOrder = [
-                            SortDescriptor(\ExpenseItem.name),
-                            SortDescriptor(\ExpenseItem.amount)
-                        ]
+                    Menu("Filter", systemImage: "line.3.horizontal.decrease.circle") {
+                        Picker("Filter", selection: $expenseType) {
+                            Text("Show All Expenses")
+                                .tag("All")
+
+                            Divider()
+
+                            ForEach(AddView.types, id: \.self) { type in
+                                Text(type)
+                                    .tag(type)
+                            }
+                        }
                     }
-                    Button("Name (Z-A)") {
-                        sortOrder = [
-                            SortDescriptor(\ExpenseItem.name, order: .reverse),
-                            SortDescriptor(\ExpenseItem.amount)
-                        ]
-                    }
-                    Button("Cheapest First") {
-                        sortOrder = [
-                            SortDescriptor(\ExpenseItem.amount),
-                            SortDescriptor(\ExpenseItem.name)
-                        ]
-                    }
-                    Button("Most Expensive First") {
-                        sortOrder = [
-                            SortDescriptor(\ExpenseItem.amount, order: .reverse),
-                            SortDescriptor(\ExpenseItem.name)
-                        ]
+                    Menu("Sort", systemImage: "arrow.up.arrow.down") {
+                        Picker("Sort by", selection: $sortOrder){
+                            Text("Name (A-Z)")
+                                .tag([
+                                    SortDescriptor(\ExpenseItem.name),
+                                    SortDescriptor(\ExpenseItem.amount)
+                                ])
+                            Text("Name (Z-A)")
+                                       .tag([
+                                           SortDescriptor(\ExpenseItem.name, order: .reverse),
+                                           SortDescriptor(\ExpenseItem.amount)
+                                       ])
+
+                                   Text("Amount (Cheapest First)")
+                                       .tag([
+                                           SortDescriptor(\ExpenseItem.amount),
+                                           SortDescriptor(\ExpenseItem.name)
+                                       ])
+
+                                   Text("Amount (Most Expensive First)")
+                                       .tag([
+                                           SortDescriptor(\ExpenseItem.amount, order: .reverse),
+                                           SortDescriptor(\ExpenseItem.name)
+                                       ])
+                            
+                        }
                     }
                 }
             }
