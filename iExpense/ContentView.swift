@@ -28,14 +28,23 @@ enum Currency: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 }
 
-
-
 struct ContentView: View {
     @Environment(\.modelContext) var modelContext
     @Query private var expenses: [ExpenseItem]
     @State private var showingAddExpense = false
     @State private var selectedCurrency: Currency = .usd
+    
+
+    @State private var sortOrder = [
+        SortDescriptor(\ExpenseItem.name),
+        SortDescriptor(\ExpenseItem.amount)
+    ]
  
+    var sortedExpenses: [ExpenseItem] {
+
+        expenses.sorted(using: sortOrder)
+    }
+    
     var body: some View {
         NavigationStack {
             VStack {
@@ -49,7 +58,7 @@ struct ContentView: View {
                 
                 List {
                     Section(header: Text("Expenses")) {
-                        ForEach(expenses) { item in
+                        ForEach(sortedExpenses) { item in
                             HStack {
                                 VStack(alignment: .leading) {
                                     Text(item.name)
@@ -71,10 +80,36 @@ struct ContentView: View {
                         Label("Add Expense", systemImage: "plus")
                     }
                 }
+                Menu("Sort", systemImage: "arrow.up.arrow.down") {
+                    Button("Name (A-Z)") {
+                        sortOrder = [
+                            SortDescriptor(\ExpenseItem.name),
+                            SortDescriptor(\ExpenseItem.amount)
+                        ]
+                    }
+                    Button("Name (Z-A)") {
+                        sortOrder = [
+                            SortDescriptor(\ExpenseItem.name, order: .reverse),
+                            SortDescriptor(\ExpenseItem.amount)
+                        ]
+                    }
+                    Button("Cheapest First") {
+                        sortOrder = [
+                            SortDescriptor(\ExpenseItem.amount),
+                            SortDescriptor(\ExpenseItem.name)
+                        ]
+                    }
+                    Button("Most Expensive First") {
+                        sortOrder = [
+                            SortDescriptor(\ExpenseItem.amount, order: .reverse),
+                            SortDescriptor(\ExpenseItem.name)
+                        ]
+                    }
+                }
             }
         }
     }
-    
+
     func formatPrice(_ amount: Double, in currency: Currency) -> String {
         switch currency {
         case .usd:
@@ -86,7 +121,7 @@ struct ContentView: View {
     }
     
     func removeItems(at offsets: IndexSet) {
-        for offset in offsets{
+        for offset in offsets {
             let item = expenses[offset]
             modelContext.delete(item)
         }
